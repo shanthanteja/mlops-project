@@ -4,40 +4,44 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ] 
+    branches: [ main ]
 
 jobs:
-  matrix-pip:
-    name: Train and Save the model
+  train:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         python: [3.11, 3.12]
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       
-      - name: Setup python 
-        uses: actions/setup-python@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-           python-version: ${{ matrix.python }}
+          python-version: ${{ matrix.python }}
+          cache: 'pip'   # 🔥 speeds up installs
       
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip setuptools wheel
-
-      - name: Install project dependencies
-        run: python -m pip install -r requirements.txt
-
-      - name: Train the model
+      - name: Install dependencies
         run: |
-           python train.py
-           ls -la artifacts
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+      
+      - name: Train the model
+        run: python train.py
+      
+      - name: Verify artifacts
+        run: |
+          if [ ! -d "artifacts" ] || [ -z "$(ls -A artifacts)" ]; then
+            echo "Artifacts missing or empty!"
+            exit 1
+          fi
+          ls -la artifacts
       
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ml-artifacts-${{ matrix.python }}-${{ github.run_id }}
           path: artifacts
-
-
